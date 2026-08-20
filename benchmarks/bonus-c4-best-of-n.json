@@ -1,0 +1,47 @@
+{
+  "prompt": "Explain why goodput@SLO is more useful than raw throughput for an LLM serving team. Answer in exactly two concise sentences.",
+  "single": {
+    "seed": 100,
+    "latency_ms": 30902.7,
+    "sentences": 0,
+    "words": 19,
+    "score": 4.0,
+    "text": "Goodput@SLO measures the actual volume of requests successfully served within agreed-upon service level objectives, reflecting user experience"
+  },
+  "candidates": [
+    {
+      "seed": 101,
+      "latency_ms": 236556.7,
+      "sentences": 0,
+      "words": 19,
+      "score": 4.0,
+      "text": "Goodput@SLO measures the actual delivered, usable output rate within service level agreements, reflecting the quality of the user"
+    },
+    {
+      "seed": 102,
+      "latency_ms": 244581.4,
+      "sentences": 0,
+      "words": 19,
+      "score": 4.0,
+      "text": "Goodput@SLO measures the actual delivery of meaningful, quality requests to users, reflecting user experience and service level adherence"
+    },
+    {
+      "seed": 103,
+      "latency_ms": 244577.3,
+      "sentences": 0,
+      "words": 18,
+      "score": 4.0,
+      "text": "Goodput@SLO measures the rate of successful requests meeting service level objectives, directly indicating user-perceived performance and"
+    },
+    {
+      "seed": 104,
+      "latency_ms": 244580.5,
+      "sentences": 1,
+      "words": 19,
+      "score": 4.0,
+      "text": "Goodput@SLO measures the actual volume of successful requests meeting service level objectives, reflecting user experience and reliability. Raw"
+    }
+  ],
+  "selected_seed": 101,
+  "best_of_n_wall_ms": 244720.8
+}

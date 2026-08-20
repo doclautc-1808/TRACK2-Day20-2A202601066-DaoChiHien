@@ -1,180 +1,125 @@
-# Reflection — Day 20 Lab (Personal Report)
+# Reflection — Day 20 Lab
 
-> **Đây là báo cáo cá nhân.** Số liệu của bạn **không** so sánh được với bạn cùng lớp
-> — chỉ so **before vs after trên chính máy bạn**. Rubric chấm độ rõ ràng của setup,
-> đo lường và **lập luận**, không chấm tốc độ tuyệt đối.
->
-> `make verify` sẽ fail nếu còn placeholder chưa điền. Đó là cố ý.
+**Họ tên:** Đào Chí Hiển
 
-**Họ Tên:** _<Họ Tên>_
-**Cohort:** _<A20-K1 / A20-K2 / ...>_
-**Ngày submit:** _<YYYY-MM-DD>_
+**MSSV:** 2A202601066
 
----
+**Cohort:** A20-K3
 
-## 1. Hardware & runtime  *(rubric 1, 2 — 10 điểm)*
+**Ngày submit:** 2026-08-20
 
-> Từ `make probe`. Paste output hoặc điền tay.
+> Số liệu dưới đây là before/after trên cùng máy và được đối chiếu với các artifact
+> JSON/CSV trong thư mục `benchmarks/`.
 
-- **OS:** _<macOS 14 / Windows 11 / Ubuntu 24.04 / ...>_
-- **CPU:** _<Apple M2 / Intel i7-12700H / AMD Ryzen 7 5800H>_
-- **Cores:** _<physical / logical>_
-- **CPU extensions:** _<AVX2 / AVX-512 / NEON / —>_
-- **RAM:** _<GB>_
-- **Accelerator:** _<NVIDIA RTX 4060 / Apple Metal / Vulkan / CPU only>_
-- **llama.cpp asset đã tải:** _<vd: llama-b10488-bin-macos-arm64.tar.gz>_
-- **Model đã dùng:** _<Gemma 4 E2B / Qwen3.5 0.8B>_ (`LAB_MODEL=`_<gemma4-e2b / qwen35-0.8b>_)
-- **Quantization:** _<primary>_ + _<compare>_ (từ `models/active.json`)
+## 1. Hardware & runtime
 
-**Chạy ở đâu:** _<laptop của tôi / Colab / Kaggle>_
-_(Nếu dùng cloud fallback: nói rõ vì sao — RAM < 8 GB, setup fail, v.v. Không mất điểm.)_
+- **OS:** Windows 10, AMD64; Python runtime dùng khi probe: 3.11.9.
+- **CPU:** Intel Core i5-8265U @ 1.60 GHz.
+- **Cores:** 4 physical / 8 logical.
+- **CPU extensions:** backend llama.cpp chọn `ggml-cpu-haswell` (AVX2-class).
+- **RAM:** 15.9 GB.
+- **Accelerator:** Intel UHD Graphics 620 qua Vulkan, unified/shared memory.
+- **llama.cpp:** `llama-b10488-bin-win-vulkan-x64.zip`, build `b10488`.
+- **Model:** Gemma 4 E2B (`LAB_MODEL=gemma4-e2b`).
+- **Quantization:** UD-Q4_K_XL primary + UD-Q2_K_XL compare.
+- **Chạy ở đâu:** laptop cá nhân, local; không dùng Colab/Kaggle.
 
-**Setup story** (≤ 80 chữ): điều gì cần thay đổi để lab chạy trên máy bạn? Có bước
-nào fail rồi phải workaround không?
+Setup ban đầu tải đủ hai GGUF nhưng Python gốc của `.venv` bị gỡ/di chuyển. Tôi cài
+Python 3.11.15 portable, tái tạo `.venv`, cài lại requirements và chạy các target bằng
+script chuẩn của lab. Do máy yếu không hoàn tất request trong 60 giây, hai run Locust
+dùng 3 phút theo mục Troubleshooting của GUIDE, với output budget 8/12 tokens.
 
-_Answer here._
-
----
-
-## 2. Đo lường  *(rubric 3, 4, 5 — 20 điểm)*
-
-> Paste bảng từ `benchmarks/01-quickstart-results.md` (`make bench` tự sinh).
+## 2. Đo lường
 
 | Quantization | Size (GB) | Load (ms) | TTFT P50/P95 (ms) | TPOT P50/P95 (ms) | E2E P50/P95/P99 (ms) | Decode (tok/s) |
-|---|--:|--:|--:|--:|--:|--:|
-| UD-Q4_K_XL | | | | | | |
-| UD-Q2_K_XL | | | | | | |
+|---|---:|---:|---:|---:|---:|---:|
+| UD-Q4_K_XL | 2.97 | 86,565 | 7,209 / 32,294 | 400.6 / 890.8 | 37,026 / 70,981 / 70,981 | 2.5 |
+| UD-Q2_K_XL | 2.24 | 94,380 | 9,156 / 58,574 | 3,468.0 / 4,307.7 | 218,224 / 329,959 / 329,959 | 0.3 |
 
-**Quan sát** (≤ 60 chữ): 2-bit nhanh hơn bao nhiêu, và **có đáng không**? Bạn đã thử
-hỏi cùng một câu trên cả hai (`make serve` vs `.venv/bin/python labs/02-serve/serve.py --compare`)
-chưa? Chất lượng khác nhau thế nào?
+Q2 decode chậm hơn khoảng 8.33× dù nhỏ hơn 0.73 GB. Cùng prompt goodput@SLO, Q4 trả lời đúng về request đạt SLO; Q2 nhầm sang hiệu quả triển khai phần mềm. Trên iGPU compute-limited, overhead dequantization lấn át lợi ích giảm bytes, nên Q2 không đáng dùng ở đây.
 
-_Answer here._
-
----
-
-## 3. Serving under load  *(rubric 8, 9, 10 — 20 điểm)*
-
-> Từ `benchmarks/02-server-results.md` (`make load-report`).
+## 3. Serving under load
 
 | Users | RPS | P50 (ms) | P95 (ms) | P99 (ms) | Eff. concurrency | Failures |
-|--:|--:|--:|--:|--:|--:|--:|
-| 10 | | | | | | |
-| 50 | | | | | | |
+|---:|---:|---:|---:|---:|---:|---:|
+| 10 | 0.08 | 122,000 | 122,000 | 122,000 | 9.1 | 60% |
+| 50 | 0.41 | 122,000 | 122,000 | 122,000 | 48.8 | 94% |
 
-- **Offered load tăng 5×, throughput thực tăng:** _<X.XX>×_
-- **P95 tăng:** _<X.XX>×_
-- **Effective concurrency ở 50 users:** _<số>_ so với `--parallel` = _<số>_ slots
+- **Offered users tăng:** 5×; total completion/timeout rate tăng 5×, nhưng successful
+  goodput giảm **0.75×** (0.0325 → 0.0244 req/s).
+- **P95:** **1.00×** vì cả hai run đều chạm timeout khoảng 122 giây.
+- **Effective concurrency ở 50 users:** 48.8 so với `--parallel=4`; phần vượt slots là queue.
+- **Peak `n_busy_slots_per_decode`:** 3.88/4; `requests_processing=4`, `requests_deferred=46`.
 
-**Peak `llamacpp:n_busy_slots_per_decode`** (từ `make metrics` khi `make load-50` đang
-chạy): _<số>_ / _<slots>_ slots
+Server bão hòa từ 10 users: failure đã là 60%, lên 94% ở 50 users và deferred đạt
+46. RPS Locust gồm cả timeout nên không phải goodput; goodput thành công thực tế giảm
+25%. Queue time là nguyên nhân chính. Tôi sẽ cap admission concurrency gần 4 trước;
+tăng slots trên UHD 620 có thể làm từng sequence chậm hơn do tranh chấp RAM.
 
-**Saturation reading** (≤ 80 chữ): server của bạn bão hoà ở đâu, và **bằng chứng nào**
-thuyết phục bạn? Nếu P95 tăng nhanh hơn RPS thì phần latency thêm đó là queue time hay
-compute time — bạn biết bằng cách nào? Nếu bạn phải nâng goodput@SLO, bạn sẽ đổi knob
-nào **trước**, và vì sao knob đó?
-
-_Answer here._
-
----
-
-## 4. Integration  *(rubric 12, 13 — 15 điểm)*
-
-> Từ `make pipeline`. Nói thật cái nào real, cái nào stub — stub **không** mất điểm.
+## 4. Integration
 
 | Day | Piece | Real hay stub? |
 |---|---|---|
-| N16 Cloud/IaC | | |
-| N17 Data pipeline | | |
-| N18 Lakehouse | | |
-| N19 Vector + features | | |
-| N20 Serving | `llama-server` | real |
+| N16 Cloud/IaC | Local Windows path | stub |
+| N17 Data pipeline | Static toy documents | stub |
+| N18 Lakehouse | In-memory document list | stub |
+| N19 Vector + features | Keyword-overlap retrieval | stub |
+| N20 Serving | `llama-server` OpenAI-compatible API | real |
 
-**Latency split** (mean của 3 query, từ output của `pipeline.py`):
+Mean trên 3 query: embed **0.0 ms**, retrieve **8.2 ms**, LLM **38,835.0 ms**,
+total **38,843.3 ms**. LLM chiếm xấp xỉ **100%** total. Bottleneck đúng như kỳ vọng
+vì N16–N19 đều là stub nhẹ. Muốn giảm 2×, tôi ưu tiên `-t 1` đã chứng minh 2.89×
+trên tg128 và giảm prompt/output; tối ưu retrieval 8.2 ms gần như vô nghĩa.
 
-- embed: _<ms>_
-- retrieve: _<ms>_
-- llm: _<ms>_
-- **stage chiếm nhiều nhất:** _<stage>_ (_<%>_ của total)
+## 5. The single change that mattered most
 
-**Reflection** (≤ 60 chữ): bottleneck ở đâu? Có khớp với kỳ vọng của bạn không? Nếu
-phải giảm latency của pipeline này 2×, bạn sẽ tấn công vào đâu?
+**Change:** giảm decode threads từ physical-core default `-t 4` xuống `-t 1`, giữ nguyên model, `ngl=99` và workload tg128.
 
-_Answer here._
-
----
-
-## 5. The single change that mattered most  *(rubric 11 — 10 điểm)*
-
-> **Phần quan trọng nhất của report.** Không cần bonus track: `make tune` đã cho bạn
-> một before/after thật (`benchmarks/01-tuning-tg128.md`). Đổi quantization,
-> `LAB_N_CTX`, hay `--parallel` rồi đo lại cũng được.
-
-**Change:** _<vd: hạ -t từ 16 xuống 8; vd: đổi sang UD-Q2_K_XL; vd: --parallel 4 → 8>_
-
-```
-before:  <số + đơn vị>
-after:   <số + đơn vị>
-speedup: <X.Y>×
+```text
+before:  1.76 tok/s  (-t 4)
+after:   5.09 tok/s  (-t 1)
+speedup: 2.89×
 ```
 
-**Tại sao nó work** (1–2 đoạn — đây là phần grader đọc kỹ nhất):
+Kết quả ngược trực giác CPU-only vì workload này offload sang Intel UHD 620. GPU tích hợp dùng RAM chung; thêm CPU threads không tăng execution units của GPU nhưng tăng scheduling/synchronization và cạnh tranh memory bandwidth. Vì vậy một thread host đủ feed GPU lại thắng bốn thread. Curve không đơn điệu (`-t 8` hồi lên 3.84 tok/s), cảnh báo rằng thermal state và noise có ảnh hưởng.
 
-_Giải thích như đang nói với bạn ngồi cạnh. Bám vào **cơ chế**, không phải "vibes":
-memory bandwidth? vector width? cache residency? scheduling? queueing? Nếu kết quả
-**khác** với kỳ vọng từ deck — nói rõ, và giải thích vì sao. Grader thưởng điểm cho
-lập luận đúng về một kết quả bất ngờ, hơn là một con số đẹp không được giải thích._
+Finding hiện dựa trên một repetition mỗi điểm do Python venv hỏng và direct sweep rất
+chậm. Đây là bằng chứng hợp lệ cho run lab, nhưng nếu dùng cho production cần chạy lại
+ít nhất 3 repetitions trong cùng power mode để xác nhận độ ổn định.
 
-_Answer here._
+## 6. Bonus
 
----
+**Đã làm:** B2 GPU-offload sweep, B3 before/after từ sweep, B4 challenge C4 Best-of-N,
+và B5/C8 semantic cache offline.
 
-## 6. Bonus  *(optional — tối đa 20 điểm)*
-
-> Bỏ trống nếu không làm. Xem `bonus/README.md`. Đừng làm hết — **một** finding sâu
-> ăn điểm hơn năm bảng nông.
-
-**Đã làm:** _<B1 build-compare / B2 sweep nào / B4 challenge nào / B5 lựa chọn nào>_
-
-**Numbers:**
-
-```
-before:  <số>
-after:   <số>
-speedup: <X.Y>×
+```text
+before:  3.7 tok/s  (full Vulkan offload, -ngl 99)
+after:   6.4 tok/s  (CPU-only, -ngl 0)
+speedup: 1.73×
 ```
 
-**Điều này nói lên gì mà deck chưa nói:**
+UHD 620 dùng RAM chung, không có matrix cores, nhưng offload vẫn phát sinh Vulkan
+scheduling và synchronization. Do không có bandwidth VRAM độc lập để bù overhead,
+CPU-only thắng; partial `-ngl 32` còn thấp nhất ở 3.4 tok/s vì chia execution giữa hai
+backend. Kết quả trái heuristic “có GPU thì offload tối đa”, nhưng phù hợp với iGPU cũ.
 
-_(để trống nếu bạn không làm phần này)_
+C4 cho kết quả âm nhưng hữu ích: Best-of-4 tăng wall latency từ 30.9 lên 244.7 giây
+(7.92×) mà score không tăng (4.0 → 4.0), do bốn slots tranh chấp bandwidth và output
+24 token bị cắt trước khi đủ hai câu. C8 offline đạt 3/8 cache hit, tránh ba lần fake
+decode (~750 ms); threshold curve phẳng và có false miss TTFT (cosine 0.00), chứng minh
+bag-of-words stub không thể thay embedding model chuyên dụng.
 
----
+## 7. Điều làm tôi ngạc nhiên nhất
 
-## 7. Điều làm bạn ngạc nhiên nhất  *(optional)*
-
-_(1–2 câu. Không bắt buộc, nhưng grader đọc hết.)_
-
-_(để trống nếu bạn không làm phần này)_
-
----
+Quantization nhỏ hơn không những chậm hơn mà còn trả lời sai nghĩa, và cấu hình một
+thread lại thắng physical-core default gần 3× khi offload qua iGPU. Hai kết quả cho
+thấy không thể chọn cấu hình chỉ theo heuristic; phải đo trên đúng workload và hardware.
 
 ## 8. Self-check trước khi push
 
-- [ ] `hardware.json` committed
-- [ ] `models/active.json` committed
-- [ ] `benchmarks/01-quickstart-results.md` committed (`make bench`)
-- [ ] `benchmarks/01-tuning-tg128.md` committed (`make tune`)
-- [ ] `benchmarks/02-server-results.md` committed (`make load-report`)
-- [ ] `benchmarks/02-server-batching-u50.md` hoặc `-metrics-u50.csv` committed (`make metrics`)
-- [ ] `benchmarks/locust-10_stats.csv` + `locust-50_stats.csv` committed (`make load-10` / `load-50`)
-- [ ] `benchmarks/03-integration-results.md` committed (`make pipeline`)
-- [ ] Mọi section **"required — replace this line"** trong các file `benchmarks/*.md`
-      đã được thay bằng nhận xét của bạn
-- [ ] 5 screenshots trong `submission/screenshots/`
-- [ ] `make verify` → **exit 0**
-- [ ] Repo GitHub ở chế độ **public**
-- [ ] Đã paste public URL vào VinUni LMS
-- [ ] **Không** commit `models/*.gguf` hay `runtime/` (đã có trong `.gitignore`)
-
-**Quan trọng:** repo phải **public** đến khi điểm được công bố. Private → grader không
-xem được → 0 điểm.
+- [ x] Số trong reflection khớp `benchmarks/*.md` và raw JSON/CSV.
+- [ x] Đã thêm 5 screenshot thật vào `submission/screenshots/`.
+- [x ] Đã commit `hardware.json`, `models/active.json`, reports, raw evidence và screenshots.
+- [ x] Chạy `python scripts/verify.py` hoặc `./lab.ps1 verify` → exit 0 sau khi phục hồi Python.
+- [x ] Repo GitHub ở chế độ public và URL đã paste vào LMS.
+- [x ] Không commit model GGUF, runtime binaries hay server logs.

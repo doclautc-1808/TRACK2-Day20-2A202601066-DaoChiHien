@@ -1,5 +1,5 @@
-<#
-  Windows runner — the equivalent of `make <target>` for students without make.
+﻿<#
+  Windows runner - the equivalent of `make <target>` for students without make.
 
   Works in Windows PowerShell 5.1 (powershell.exe) and PowerShell 7+ (pwsh).
 
@@ -12,7 +12,7 @@
       .\lab.ps1 verify
 
   Every target maps 1:1 to the make target of the same name, so GUIDE.md applies
-  as written — just substitute `.\lab.ps1 x` for `make x`.
+  as written - just substitute `.\lab.ps1 x` for `make x`.
 #>
 param(
     [Parameter(Position = 0)] [string] $Target = "help",
@@ -32,6 +32,12 @@ function Need-Venv {
         Write-Host "Run this first:  .\lab.ps1 setup"
         exit 1
     }
+    & $VenvPy --version 2>$null | Out-Null
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "ERROR: .venv exists but its base Python was removed or moved." -ForegroundColor Red
+        Write-Host "Delete only .venv, reinstall Python 3.11+, then run:  .\lab.ps1 setup"
+        exit 1
+    }
 }
 
 function Py { Need-Venv; & $VenvPy @args; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE } }
@@ -45,7 +51,7 @@ function Locust {
 switch ($Target) {
     'help' {
         Write-Host ""
-        Write-Host "Day 20 lab — Windows runner" -ForegroundColor Cyan
+        Write-Host "Day 20 lab - Windows runner" -ForegroundColor Cyan
         Write-Host "Usage:  .\lab.ps1 <target>"
         Write-Host ""
         Write-Host "Setup (00)"
@@ -106,8 +112,12 @@ switch ($Target) {
 
     'pipeline' { Py labs\03-integrate\pipeline.py @Rest }
 
-    # verify must work with system Python too: the grader has no .venv.
-    'verify' { & $SysPy scripts\verify.py; exit $LASTEXITCODE }
+    # Prefer the lab venv on Windows; fall back to system Python for fresh clones.
+    'verify' {
+        if (Test-Path $VenvPy) { & $VenvPy scripts\verify.py }
+        else { & $SysPy scripts\verify.py }
+        exit $LASTEXITCODE
+    }
 
     'sweep-quant' { Py bonus\sweeps\quant-sweep.py @Rest }
     'sweep-ctx'   { Py bonus\sweeps\ctx-len-sweep.py @Rest }

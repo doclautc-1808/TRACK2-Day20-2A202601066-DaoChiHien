@@ -39,7 +39,10 @@ def main() -> int:
     grid = [int(x) for x in args.grid.split(",") if x.strip()]
     active = [k for k, v in hw["gpu"]["backends"].items() if v and k != "cpu_only"]
     is_prefill = args.metric.startswith("pp")
-    shape = ["-p", args.metric[2:], "-n", "0"] if is_prefill else ["-p", "0", "-n", "128"]
+    if not (is_prefill or args.metric.startswith("tg")):
+        labkit.die("--metric must look like pp128 or tg32.")
+    shape = (["-p", args.metric[2:], "-n", "0"] if is_prefill
+             else ["-p", "0", "-n", args.metric[2:]])
 
     labkit.banner(f"GPU offload sweep on {pathlib.Path(model).name}")
     print(f"  backend(s): {', '.join(active)} · threads {threads} · grid {grid}\n")
